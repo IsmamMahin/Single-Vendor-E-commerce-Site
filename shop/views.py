@@ -4,6 +4,7 @@ from django.contrib import messages
 from forms import RegistrationForm, RatingForm
 from . import models
 from django.db.models import Q, Min, Max, Avg
+from . import forms
 # Create your views here.
 
 # Manual User Authentication
@@ -150,3 +151,142 @@ def rate_product(request, product_id):
             'form': form,
             'product': product
         })
+    
+def cart_add(request, product_id):
+    product = get_object_or_404(models.Product, id=product_id)
+
+    # jodi thake taile oi cart ta check korbo
+    try:
+        cart = models.Cart.objects.get(user = request.user)
+    # jodi na thake, taile cart ekta banabo
+    except models.Cart.DoesNotExist:
+        cart = models.Cart.objects.create(user = request.user)
+
+    # cart e item add korbo
+    # item already is in cart
+    try:
+        cart_item = models.CartItem.objects.get(cart = cart, product = product)
+        cart_item.quantity += 1
+        cart_item.save()
+
+    # item is not in cart
+    except models.CartItem.DoesNotExist:
+        models.CartItem.objects.create(cart = cart, product = product, quantity = 1)
+
+    messages.success(request, f"{product.name} has ben added to your cart!")
+    return redirect(request ,'')
+
+# cart update
+# cart item quantity increase/decrease korte parbo
+
+def cart_update(request, product_id):
+    #cart konta
+    #cart er item konta
+    # stock er sathe compare kora
+
+    cart = get_object_or_404(models.Cart, user = request.user)
+    product = get_object_or_404(models.Product, product_id)
+    cart_item = get_object_or_404(models.CartItem, cart = cart, product = product)
+
+    quantity = int(request.POST.get('quantity', 1))
+    
+    if quantity <= 0:
+        cart_item.delete()
+        messages.success(request, f"Item has been removed from the cart")
+    else:
+        cart_item.quantity = quantity
+        cart_item.save()
+        messages.success(request, f"Cart updated successfully")
+
+def cart_remove(request, product_id):
+    cart = get_object_or_404(models.cart, user = request.user)
+    product= get_object_or_404(models.Product, id = product_id)
+    cart_item = get_object_or_404(models.CartItem, cart = cart, product = product)
+
+    cart_item.delete()
+    messages.success(request, f"{product.name} has been successfully removed from your cart")
+    return redirect('')
+
+def cart_detail(request):
+    #user er kono cart nai
+    #user er cart ase
+    try:
+        cart = models.Cart.objects.get(user = request.user)
+    except: models.Cart.objects.create(user = request.user)
+
+    return render(request, '', {'cart':cart})
+
+# checkout
+# cart er data gula niye ashbo
+# Total taka
+# Payment option --> payment gateway te niye jabo
+# Product --> Cart Item --> Order Item
+def checkout(request):
+    try:
+        cart = models.Cart.objects.get(user = request.user)
+        if not cart.items.exists():
+            messages.warning(request, 'Your cart is empty')
+            return redirect()
+    except models.Cart.DoesNotExist:
+        messages.warning(request, 'Cart does not exist')
+        return redirect('')
+    
+    # checkout form ta fillup korbe
+    if request.method == 'POST':
+        form = forms.CheckoutForm(request.POST)
+        if form.is_valid():
+            order = form.save(commit=False) # Order form create hobe kintu data database e jabe na
+            order.user = request.user
+            order.save() #order kora hoye gese
+
+            for item in cart.items.all():
+                models.OrderItem.objects.create(
+                    order = order,
+                    product = item.product, # cart item e ekhon order item
+                    price = item.product.price, # product er main price e order item er main price
+                    quantity = item.quantity # cart item er quantity e hocche order item er quantity
+                )
+
+            # order kora done finally
+            # cart er ar kono value e nai
+            cart.items.all().delete() #cart er item gula delete kore dilam
+
+            return render(request, '', {
+                'cart' : cart,
+                'form' : form
+            })
+        
+# Payment related khela
+# 0.Payment process --> SSL Commerz er window dekhabe, email confirmation pathano
+# 1.Payment success
+# 2.Payment failed
+# 3.Payment cancel
+
+def payment_success(request, order_id):
+    order = get_object_or_404(models.Order, id = order_id, user=request.user)
+# order ta paid
+# order er status --> processing
+# product er stock komiye dibo
+# transaction id
+    order.paid = True
+    order.status = 'processing'
+    order.transaction_id = order.id
+    order.save()
+    order_items = order.order_items.all()
+    for item in order_items:
+        product = item.product
+        product.stock -= item.quantity
+
+        if product.stock < 0:
+            product = 0
+        product.save()
+
+    # send confirmation mail
+    messages.success(request, 'Payment Successful!')
+    return render(request, '', {'order':order})
+
+def payment_fail(request, order_id):
+    order = get_object_or_404(models.Order, id = order_id, user=request.user)
+    order.status = 'canceled'
+    order.save()
+    return redirect('')
