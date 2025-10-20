@@ -5,6 +5,7 @@ from forms import RegistrationForm, RatingForm
 from . import models
 from django.db.models import Q, Min, Max, Avg
 from . import forms
+from . import sslcommerz
 # Create your views here.
 
 # Manual User Authentication
@@ -221,6 +222,7 @@ def cart_detail(request):
 # Total taka
 # Payment option --> payment gateway te niye jabo
 # Product --> Cart Item --> Order Item
+
 def checkout(request):
     try:
         cart = models.Cart.objects.get(user = request.user)
@@ -261,6 +263,20 @@ def checkout(request):
 # 1.Payment success
 # 2.Payment failed
 # 3.Payment cancel
+
+def payment_process(request):
+    #session
+    order_id = request.session.get('order_id')
+    if not order_id:
+        return redirect('')
+    
+    order = get_object_or_404(models.Order, id=order_id)
+    payment_data = sslcommerz.generate_sslcommerz_payment(request, order)
+
+    if payment_data['status'] == 'SUCCESS' :
+        return redirect()
+    else:
+        messages.erro(request, 'Payment gateway error')
 
 def payment_success(request, order_id):
     order = get_object_or_404(models.Order, id = order_id, user=request.user)

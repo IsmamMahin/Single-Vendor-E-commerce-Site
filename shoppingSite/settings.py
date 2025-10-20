@@ -52,7 +52,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'shop',    
+    # 'shop',    
     "allauth.account.middleware.AccountMiddleware",
 ]
 
@@ -69,6 +69,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.request',
+                'shop.context_processors.cart_items_count',
             ],
         },
     },
@@ -139,3 +140,19 @@ ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# SSL Commerz setup
+SSLCOMMERZ_STORE_ID = 'eshop68f6169ec8e3c'
+SSLCOMMERZ_STORE_PASSWORD = 'eshop68f6169ec8e3c@ssl'
+SSLCOMMERZ_PAYMENT_URL = 'https://sandbox.sslcommerz.com/gwprocess/v3/api.php'
+SSLCOMMERZ_VALIDATION_URL = 'https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php?wsdl'
+
+# Email setup
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST_USER = 'ismamahnafm@gmail.com'
+EMAIL_HOST_PASSWORD = 'tyhmupriwoynesjm'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+# DEFAULT_FROM_EMAIL = 'default from email'
