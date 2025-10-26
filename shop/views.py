@@ -306,3 +306,14 @@ def payment_fail(request, order_id):
     order.status = 'canceled'
     order.save()
     return redirect('')
+
+def payment_cancel(request, order_id):
+    order = get_object_or_404(Order, id = order_id)
+    order.status = 
+    order.save()
+    return redirect('cart_detail')
+
+def profile(request):
+    tab = request.GET.get('tab')
+    orders = Order.objects.filter(user = request.user)
+    
